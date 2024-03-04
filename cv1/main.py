@@ -1,5 +1,10 @@
-import struct
-
+"""
+Author: Lukas Runt
+Email: lrunt@students.zcu.cz
+Date: November 06, 2023,
+Version: 1.0.0
+Description: Program to extract hidden information form the .bmp image
+"""
 if __name__ == '__main__':
     with open('data/obr2.bmp', 'rb') as file:
         bmp_header = file.read(14)
