@@ -1,7 +1,7 @@
 """
 Author: Lukas Runt
 Email: lrunt@students.zcu.cz
-Date: November 06, 2023,
+Date: February 27, 2024,
 Version: 1.0.0
 Description: Program to extract hidden information form the .bmp image
 """
