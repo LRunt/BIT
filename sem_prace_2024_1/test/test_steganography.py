@@ -5,11 +5,11 @@ import os
 # pip install opencv-python if not installed
 import cv2
 
-
 STEGANOGRAPHY_IMG = "../weber.bmp"
 DATA_SOURCE = "../validation/"
 OUTPUT_DIR = "../out/"
 DECODED_DIR = "../decoded/"
+
 
 class SteganographyTester(unittest.TestCase):
 
@@ -26,7 +26,6 @@ class SteganographyTester(unittest.TestCase):
             filename = os.path.join(OUTPUT_DIR, file)
             file_stats = os.stat(filename)
             assert file_stats.st_size == steg_img_file_size
-
 
     def test_all_imgs_after_steganography(self):
         """
@@ -49,7 +48,6 @@ class SteganographyTester(unittest.TestCase):
                 img_bytes = fr.read()
             assert original_img_bytes[:1024] != img_bytes[:1024]
 
-
     def test_decoded_results(self):
         """
         This test compares all files in DATA_SOURCE contra all files in DECODED_DIR
@@ -70,6 +68,3 @@ class SteganographyTester(unittest.TestCase):
                     assert decoded_bytes == validation_bytes
                     print("OK")
                     break
-
-
-
