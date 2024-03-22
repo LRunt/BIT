@@ -7,7 +7,7 @@ OUTPUT_DIR = "out"
 DECODED_DIR = "decoded"
 KEY_FILEPATH = "key.txt"
 
-DEBUG = True
+DEBUG = False
 
 
 if __name__ == '__main__':
@@ -48,7 +48,10 @@ if __name__ == '__main__':
                 data_folder = DATA_SOURCE
                 output_folder = OUTPUT_DIR
 
-                ##key genaration 64-bit length
+                #key genaration 64-bit length
+                key = des.create_key()
+                with open(KEY_FILEPATH, 'w') as file:
+                    file.write(key)
                 # TODO call Des function to create a key and store it to the KEY_FILEPATH
 
             elif mode == "-d":
