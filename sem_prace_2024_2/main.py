@@ -78,7 +78,7 @@ if __name__ == '__main__':
                     key = int(key_string, 16)
                     print(f"File name: {file_name}")
                     print(f"File extension: {file_extension}")
-                    print(f"File content: {input_bytes}")
+                    #print(f"File content: {input_bytes}")
                     print(f"Key string: {key_string}")
                     print(f"Key: {key}")
 
@@ -87,7 +87,7 @@ if __name__ == '__main__':
 
                     if des.encryption:
                         # building output_filename
-                        output_filename = file_name + '_' + file_extension + '.des'
+                        output_filename = file_name + '_' + file_extension[1:] + '.des'
                         pass
                     else:
                         # building output_name
@@ -96,5 +96,5 @@ if __name__ == '__main__':
                         pass
 
                     # saving output bytes
-                    with open(output_filename, 'wb') as output_file:
+                    with open(OUTPUT_DIR + '/' + output_filename, 'wb') as output_file:
                         output_file.write(output_bytes)
