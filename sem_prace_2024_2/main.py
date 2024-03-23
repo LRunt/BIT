@@ -9,10 +9,9 @@ KEY_FILEPATH = "key.txt"
 
 DEBUG = False
 
-
 if __name__ == '__main__':
     if DEBUG:
-        ## The purpose of this is to make sure that DES algorithm is correct
+        # The purpose of this is to make sure that DES algorithm is correct
         # example is from https://page.math.tu-berlin.de/~kant/teaching/hess/krypto-ws2006/des.htm
 
         print("WARNING: running in DEBUG mode!")
@@ -26,7 +25,7 @@ if __name__ == '__main__':
         des_encrypt = Des(encryption=True)
         debug_output_bytes = des_encrypt.perform_des(input_bytes=bytes.fromhex(debug_input_hex), key=key)
 
-        ## decryption
+        # decryption
         des_decrypt = Des(encryption=False)
         decoded_bytes = des_decrypt.perform_des(debug_output_bytes, key=key)
 
@@ -48,11 +47,10 @@ if __name__ == '__main__':
                 data_folder = DATA_SOURCE
                 output_folder = OUTPUT_DIR
 
-                #key genaration 64-bit length
+                # key generation 64-bit length
                 key = des.create_key()
                 with open(KEY_FILEPATH, 'w') as file:
                     file.write(key)
-                # TODO call Des function to create a key and store it to the KEY_FILEPATH
 
             elif mode == "-d":
                 print("Decryption mode")
@@ -68,20 +66,35 @@ if __name__ == '__main__':
                 print(f"{len(files)} files found in {data_folder}")
                 for file in files:
 
-                    # TODO Load file and save its filename and extension
-                    input_bytes = None
+                    # Saving filename and extension
+                    file_name, file_extension = os.path.splitext(os.path.basename(file))
+                    # Loading file
+                    with open(data_folder + "/" + file, 'rb') as f:
+                        input_bytes = f.read()
 
-                    # TODO Load key
-                    key = None
+                    # Loading key
+                    with open(KEY_FILEPATH, 'r') as key_file:
+                        key_string = key_file.read()
+                    key = int(key_string, 16)
+                    print(f"File name: {file_name}")
+                    print(f"File extension: {file_extension}")
+                    print(f"File content: {input_bytes}")
+                    print(f"Key string: {key_string}")
+                    print(f"Key: {key}")
 
                     print(f"Processing file {file}")
                     output_bytes = des.perform_des(input_bytes=input_bytes, key=key)
 
                     if des.encryption:
-                        # TODO build output_filename
+                        # building output_filename
+                        output_filename = file_name + '_' + file_extension + '.des'
                         pass
                     else:
-                        # TODO build original filename from the filename of .des file
+                        # building output_name
+                        name_and_extension = file_name.split('_')
+                        output_filename = name_and_extension[0] + '.' + name_and_extension[1]
                         pass
 
-                    # TODO save output bytes to the proper file based on encryption or decryption
+                    # saving output bytes
+                    with open(output_filename, 'wb') as output_file:
+                        output_file.write(output_bytes)
