@@ -122,20 +122,16 @@ class Des:
         """
         coded_bytes = bytearray()
         key = format(key, '064b')
-        #print(key)
-        #print(f"Key 0: {key[0]}")
         keys = self.generate_keys(key)
         if not self.encryption:
             keys.reverse()
             padded_input_bytes = input_bytes
         else:
             padded_input_bytes = self.add_zero_padding(input_bytes)
-        #print(f"Keys: {keys}")
         num_blocks = len(padded_input_bytes) // self.BYTE_BLOCK_SIZE
         actual_block = 0
         for i in tqdm(range(num_blocks), desc=description):
             actual_block += 1
-            #print(f"Actual block: {actual_block} of {num_blocks}")
             start = i * self.BYTE_BLOCK_SIZE
             coded_bytes += self.encode_block(padded_input_bytes[start:start + self.BYTE_BLOCK_SIZE], keys)
         if not self.encryption:
@@ -156,15 +152,11 @@ class Des:
         :return: List of keys for every iteration.
         """
         permutate_key = self.get_permutatation(key, self.KEY_PERMUTATION)
-        #print(f"Permutate key: {permutate_key}")
         left, right = self.split_in_half(permutate_key)
-        #print(f"Left: {left}")
-        #print(f"Right: {right}")
         keys = [None] * self.ITERATIONS
         for i in range(self.ITERATIONS):
             left = self.binary_left_rotation(left, self.SHIFTS[i])
             right = self.binary_left_rotation(right, self.SHIFTS[i])
-            #print(f"C{i + 1}: {left}\nD{i + 1}: {right}")
             keys[i] = self.get_permutatation(left + right, self.COMPRESSION_PERMUTATION)
         return keys
 
@@ -206,7 +198,6 @@ class Des:
         :return: Bytes with zero padding.
         """
         num_of_padding_bytes = self.BYTE_BLOCK_SIZE - (len(input_bytes) % self.BYTE_BLOCK_SIZE)
-        #print(f"Adding padding: {num_of_padding_bytes}")
         padding = bytes([0x00] * (num_of_padding_bytes - 1)) + bytes([num_of_padding_bytes])
         input_bytes += padding
         return input_bytes

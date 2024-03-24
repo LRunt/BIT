@@ -77,12 +77,7 @@ if __name__ == '__main__':
                     with open(KEY_FILEPATH, 'r') as key_file:
                         key_string = key_file.read()
                     key = int(key_string, 16)
-                    # print(f"File name: {file_name}")
-                    # print(f"File extension: {file_extension}")
-                    # print(f"Key string: {key_string}")
-                    # print(f"Key: {key}")
 
-                    # print(f"Processing file {file}")
                     output_bytes = des.perform_des(input_bytes=input_bytes, key=key, description=f"Processing {file}")
 
                     if des.encryption:
