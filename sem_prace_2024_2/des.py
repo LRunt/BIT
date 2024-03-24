@@ -89,6 +89,7 @@ class Des:
                2, 1, 14, 7, 4, 10, 8, 13, 15, 12, 9, 0, 3, 5, 6, 11
                ]
 
+    # Permutation in the function
     FUNCTION_PERMUTATION = [16, 7, 20, 21,
                             29, 12, 28, 17,
                             1, 15, 23, 26,
@@ -98,6 +99,7 @@ class Des:
                             19, 13, 30, 6,
                             22, 11, 4, 25]
 
+    # The final permutation
     FINAL_PERMUTATION = [40, 8, 48, 16, 56, 24, 64, 32,
                          39, 7, 47, 15, 55, 23, 63, 31,
                          38, 6, 46, 14, 54, 22, 62, 30,
@@ -110,54 +112,68 @@ class Des:
     def __init__(self, encryption: bool = True):
         self.encryption = encryption
 
-    def perform_des(self, input_bytes: bytes, key):
+    def perform_des(self, input_bytes: bytes, key: int, description: str):
+        """
+        Performing the DES (Data Encryption Standard) encryption or decryption
+        :param input_bytes: Bytes what will be encrypted
+        :param key: Key which will be used to encrypt or decrypt.
+        :param description: Description of the action.
+        :return: Encoded or decoded bytes.
+        """
         coded_bytes = bytearray()
         key = format(key, '064b')
-        print(key)
-        print(f"Key 0: {key[0]}")
+        #print(key)
+        #print(f"Key 0: {key[0]}")
         keys = self.generate_keys(key)
-        print(f"Keys: {keys}")
-        padded_input_bytes = self.add_zero_padding(input_bytes)
-        num_blocks = len(input_bytes) // self.BYTE_BLOCK_SIZE
+        if not self.encryption:
+            keys.reverse()
+            padded_input_bytes = input_bytes
+        else:
+            padded_input_bytes = self.add_zero_padding(input_bytes)
+        #print(f"Keys: {keys}")
+        num_blocks = len(padded_input_bytes) // self.BYTE_BLOCK_SIZE
         actual_block = 0
-        for i in range(num_blocks):
+        for i in tqdm(range(num_blocks), desc=description):
             actual_block += 1
-            print(f"Actual block: {actual_block} of {num_blocks}")
+            #print(f"Actual block: {actual_block} of {num_blocks}")
             start = i * self.BYTE_BLOCK_SIZE
             coded_bytes += self.encode_block(padded_input_bytes[start:start + self.BYTE_BLOCK_SIZE], keys)
+        if not self.encryption:
+            coded_bytes = self.remove_zero_padding(coded_bytes)
         return coded_bytes
+
 
     def create_key(self):
         """
-        Generating the 64-bit key
+        Generating the 64-bit key.
         """
         return secrets.token_hex(self.LENGTH_OF_KEY)
 
     def generate_keys(self, key: str):
         """
-        Method generating keys for all iterations
-        :param key: key value from witch are the keys generated
-        :return: List of keys for every iteration
+        Method generating keys for all iterations.
+        :param key: Key value from witch are the keys generated.
+        :return: List of keys for every iteration.
         """
         permutate_key = self.get_permutatation(key, self.KEY_PERMUTATION)
-        print(f"Permutate key: {permutate_key}")
+        #print(f"Permutate key: {permutate_key}")
         left, right = self.split_in_half(permutate_key)
-        print(f"Left: {left}")
-        print(f"Right: {right}")
+        #print(f"Left: {left}")
+        #print(f"Right: {right}")
         keys = [None] * self.ITERATIONS
         for i in range(self.ITERATIONS):
             left = self.binary_left_rotation(left, self.SHIFTS[i])
             right = self.binary_left_rotation(right, self.SHIFTS[i])
-            print(f"C{i + 1}: {left}\nD{i + 1}: {right}")
+            #print(f"C{i + 1}: {left}\nD{i + 1}: {right}")
             keys[i] = self.get_permutatation(left + right, self.COMPRESSION_PERMUTATION)
         return keys
 
     def get_permutatation(self, binary: str, permutation_rules: list):
         """
         Returns a permutation of string
-        :param binary: binary what will be permuted
-        :param permutation_rules: the rules of the permutation
-        :return: permuted binary
+        :param binary: Binary what will be permuted.
+        :param permutation_rules: Rules of the permutation.
+        :return: Permuted binary.
         """
         permutation = ''
         for position in permutation_rules:
@@ -166,30 +182,51 @@ class Des:
 
     def split_in_half(self, binary: str):
         """
-        Returns binary split in half
-        :param binary: binary what will be split
-        :return: left and right half of the binary
+        Returns binary split in half.
+        :param binary: Binary what will be split.
+        :return: Left and right half of the binary.
         """
         half = len(binary) // 2
         return binary[:half], binary[half:]
 
     def binary_left_rotation(self, binary: str, n: int):
         """
-        Returns binary rotation of the binary
-        :param binary: binary what will be rotated
-        :param n: shift positions
-        :return: rotated binary
+        Returns binary rotation of the binary.
+        :param binary: Binary what will be rotated.
+        :param n: Number of shift positions.
+        :return: Rotated binary.
         """
         return binary[n:] + binary[:n]
 
-    def add_zero_padding(self, input_bytes):
+    def add_zero_padding(self, input_bytes: bytes):
+        """
+        Adding zero padding bytes to align the file size to the desired length.
+        Adding zeros and number of added bytes on last position of the array.
+        :param input_bytes: Bytes where will be the zero padding performed.
+        :return: Bytes with zero padding.
+        """
         num_of_padding_bytes = self.BYTE_BLOCK_SIZE - (len(input_bytes) % self.BYTE_BLOCK_SIZE)
-        print(f"Adding padding: {num_of_padding_bytes}")
+        #print(f"Adding padding: {num_of_padding_bytes}")
         padding = bytes([0x00] * (num_of_padding_bytes - 1)) + bytes([num_of_padding_bytes])
         input_bytes += padding
         return input_bytes
 
+    def remove_zero_padding(self, decoded_bytes: bytes):
+        """
+        Removes the zero padding form the byte array.
+        :param decoded_bytes: Decoded bytes with zero padding.
+        :return: Bytes without zero padding.
+        """
+        num_of_padding_bytes = decoded_bytes[-1]
+        return decoded_bytes[:-num_of_padding_bytes]
+
     def encode_block(self, bytes_block: bytes, keys: list):
+        """
+        Encoding or decoding the block of bytes.
+        :param bytes_block: Block of bytes what will be encoded.
+        :param keys: Keys for each iteration
+        :return: Encoded or decoded bytes.
+        """
         binary_block = ''.join(format(byte, '08b') for byte in bytes_block)
         # Initial permutation
         permuted_block = self.get_permutatation(binary_block, self.INITIAL_PERMUTATION)
@@ -203,27 +240,36 @@ class Des:
             # Rn
             # Expanding R
             right = self.get_permutatation(right, self.EXPAND_PERMUTATION)
-            right = self.xor_operation(right, keys[i], '048b')
+            right = self.xor_operation(right, keys[i])
             right = self.s_box_operation(right)
             # Permutation
             right = self.get_permutatation(right, self.FUNCTION_PERMUTATION)
             # xor with left side
-            right = self.xor_operation(left_previous, right, '032b')
+            right = self.xor_operation(left_previous, right)
         encrypted_block = right + left
         encrypted_block = self.get_permutatation(encrypted_block, self.FINAL_PERMUTATION)
         encrypted_block = int(encrypted_block, 2).to_bytes(8, byteorder='big')
         return encrypted_block
 
-    def xor_operation(self, binary: str, key_binary: str, num_bits: str):
-        if len(binary) != len(key_binary):
+    def xor_operation(self, first_binary: str, second_binary: str):
+        """
+        The operation of xor of two binaries.
+        :param first_binary: The first binary (in string).
+        :param second_binary: The second binary (in string).
+        :return: Result of XOR operation.
+        """
+        if len(first_binary) != len(second_binary):
             raise ValueError("Binary strings must be of the same length")
-        #print(f"R: \t\t {binary}")
-        #print(f"Key:\t {key_binary}")
-        result = int(binary, 2) ^ int(key_binary, 2)
-        #print(f"Result:\t {format(result, num_bits)}")
-        return format(result, num_bits)
+        num_bits = len(first_binary)
+        result = int(first_binary, 2) ^ int(second_binary, 2)
+        return format(result, f'0{num_bits}b')
 
     def s_box_operation(self, binary: str):
+        """
+        Operation of S-Boxes performing a substitution from 48-bits to 32-bits
+        :param binary: Binary on which the substitution will be performed.
+        :return: Substituted binary.
+        """
         result = ''
         for i in range(self.NUMBER_OF_S_BOXES):
             # get 6 bits
