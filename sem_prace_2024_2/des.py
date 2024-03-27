@@ -1,4 +1,6 @@
 from tqdm import tqdm
+from bitarray import bitarray
+from bitarray.util import int2ba, ba2int
 import secrets
 
 
@@ -121,7 +123,7 @@ class Des:
         :return: Encoded or decoded bytes.
         """
         coded_bytes = bytearray()
-        key = format(key, '064b')
+        key = int2ba(key, length=64, endian='big', signed=False)
         keys = self.generate_keys(key)
         if not self.encryption:
             keys.reverse()
@@ -145,7 +147,7 @@ class Des:
         """
         return secrets.token_hex(self.LENGTH_OF_KEY)
 
-    def generate_keys(self, key: str):
+    def generate_keys(self, key: bitarray):
         """
         Method generating keys for all iterations.
         :param key: Key value from witch are the keys generated.
@@ -160,35 +162,35 @@ class Des:
             keys[i] = self.get_permutatation(left + right, self.COMPRESSION_PERMUTATION)
         return keys
 
-    def get_permutatation(self, binary: str, permutation_rules: list):
+    def get_permutatation(self, binary: bitarray, permutation_rules: list) -> bitarray:
         """
-        Returns a permutation of string
+        Returns a permutation of bitearray
         :param binary: Binary what will be permuted.
         :param permutation_rules: Rules of the permutation.
         :return: Permuted binary.
         """
-        permutation = ''
-        for position in permutation_rules:
-            permutation += binary[position - 1]
-        return permutation
+        permuted_binary = bitarray(len(permutation_rules))
+        for i, position in enumerate(permutation_rules):
+            permuted_binary[i] += binary[position - 1]
+        return permuted_binary
 
-    def split_in_half(self, binary: str):
+    def split_in_half(self, binary: bitarray) -> tuple:
         """
-        Returns binary split in half.
-        :param binary: Binary what will be split.
-        :return: Left and right half of the binary.
+        Returns the bitarray split in half.
+        :param binary: bitarray to be split.
+        :return: Tuple of left and right halves of the bitarray.
         """
         half = len(binary) // 2
         return binary[:half], binary[half:]
 
-    def binary_left_rotation(self, binary: str, n: int):
+    def binary_left_rotation(self, binary: bitarray, shift: int) -> bitarray:
         """
-        Returns binary rotation of the binary.
-        :param binary: Binary what will be rotated.
-        :param n: Number of shift positions.
-        :return: Rotated binary.
+        Performs a left rotation (circular shift) on a bitarray.
+        :param binary: bitarray to rotate.
+        :param n: Number of positions to shift.
+        :return: Rotated bitarray.
         """
-        return binary[n:] + binary[:n]
+        return binary[shift:] + binary[:shift]
 
     def add_zero_padding(self, input_bytes: bytes):
         """
@@ -218,7 +220,8 @@ class Des:
         :param keys: Keys for each iteration
         :return: Encoded or decoded bytes.
         """
-        binary_block = ''.join(format(byte, '08b') for byte in bytes_block)
+        binary_block = bitarray()
+        binary_block.frombytes(bytes_block)
         # Initial permutation
         permuted_block = self.get_permutatation(binary_block, self.INITIAL_PERMUTATION)
         # Split into two half
@@ -239,38 +242,34 @@ class Des:
             right = self.xor_operation(left_previous, right)
         encrypted_block = right + left
         encrypted_block = self.get_permutatation(encrypted_block, self.FINAL_PERMUTATION)
-        encrypted_block = int(encrypted_block, 2).to_bytes(8, byteorder='big')
-        return encrypted_block
+        encrypted_bytes = encrypted_block.tobytes()
+        return encrypted_bytes
 
-    def xor_operation(self, first_binary: str, second_binary: str):
+    def xor_operation(self, first_binary: bitarray, second_binary: bitarray) -> bitarray:
         """
-        The operation of xor of two binaries.
-        :param first_binary: The first binary (in string).
-        :param second_binary: The second binary (in string).
-        :return: Result of XOR operation.
+        Performs the operation of XOR on two bitarrays.
+        :param first_binary: The first bitarray.
+        :param second_binary: The second bitarray.
+        :return: Result of XOR operation as a bitarray.
         """
         if len(first_binary) != len(second_binary):
-            raise ValueError("Binary strings must be of the same length")
-        num_bits = len(first_binary)
-        result = int(first_binary, 2) ^ int(second_binary, 2)
-        return format(result, f'0{num_bits}b')
+            raise ValueError("Bitarrays must be of the same length")
+        return first_binary ^ second_binary
 
-    def s_box_operation(self, binary: str):
+    def s_box_operation(self, binary: bitarray) -> bitarray:
         """
         Operation of S-Boxes performing a substitution from 48-bits to 32-bits
-        :param binary: Binary on which the substitution will be performed.
-        :return: Substituted binary.
+        :param binary: Bitarray on which the substitution will be performed.
+        :return: Substituted bitarray.
         """
-        result = ''
+        result = bitarray(endian='big')  # Ensure the bitarray is big-endian for consistency
         for i in range(self.NUMBER_OF_S_BOXES):
-            # get 6 bits
+            # Get 6 bits
             start_index = i * self.BITS_IN_S_BOX
             end_index = start_index + self.BITS_IN_S_BOX
             segment = binary[start_index:end_index]
-            # get row
-            row = int(segment[0] + segment[5], 2)
-            # get column
-            column = int(segment[1] + segment[2] + segment[3] + segment[4], 2)
+            row = ba2int(bitarray([segment[0], segment[-1]]))
+            column = ba2int(segment[1:5])
             s_box_value = self.S_BOXES[i * self.S_BOX_SIZE + row * self.S_BOX_COLUMNS + column]
-            result += format(s_box_value, '04b')
+            result.extend(int2ba(s_box_value, length=4, endian='big'))
         return result
