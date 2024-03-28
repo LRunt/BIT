@@ -16,7 +16,7 @@ if __name__ == '__main__':
 
         print("WARNING: running in DEBUG mode!")
         # debug_input: int = 81985529216486895
-        debug_input_hex = "12345690abcdef"
+        debug_input_hex = "0123456789abcdef"
         # debug_key: int = 1383827165325090801
         debug_key_hex = 0x133457799bbcdff1
 

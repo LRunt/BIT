@@ -121,23 +121,24 @@ class Des:
         :return: Encoded or decoded bytes.
         """
         coded_bytes = bytearray()
-        key = format(key, '064b')
         keys = self.generate_keys(key)
+        binary_representation = ' '.join(format(byte, '08b') for byte in input_bytes)
+
+        print(f"Binary: {binary_representation}")
         if not self.encryption:
             keys.reverse()
             padded_input_bytes = input_bytes
         else:
             padded_input_bytes = self.add_zero_padding(input_bytes)
         num_blocks = len(padded_input_bytes) // self.BYTE_BLOCK_SIZE
-        actual_block = 0
         for i in tqdm(range(num_blocks), desc=description):
-            actual_block += 1
             start = i * self.BYTE_BLOCK_SIZE
-            coded_bytes += self.encode_block(padded_input_bytes[start:start + self.BYTE_BLOCK_SIZE], keys)
+            block = padded_input_bytes[start:start + self.BYTE_BLOCK_SIZE]
+            #print(f"Message: {padded_input_bytes[start:start + self.BYTE_BLOCK_SIZE]}")
+            coded_bytes += self.encode_block(block, keys)
         if not self.encryption:
             coded_bytes = self.remove_zero_padding(coded_bytes)
         return coded_bytes
-
 
     def create_key(self):
         """
@@ -145,50 +146,67 @@ class Des:
         """
         return secrets.token_hex(self.LENGTH_OF_KEY)
 
-    def generate_keys(self, key: str):
+    def generate_keys(self, key: int):
         """
         Method generating keys for all iterations.
         :param key: Key value from witch are the keys generated.
         :return: List of keys for every iteration.
         """
-        permutate_key = self.get_permutatation(key, self.KEY_PERMUTATION)
-        left, right = self.split_in_half(permutate_key)
+        print(f"Key: {format(key, '064b')}")
+        permutate_key = self.get_permutatation(key, self.KEY_PERMUTATION, 64)
+        print(f"Permuted Key: {format(permutate_key, '056b')}")
+        left, right = self.split_in_half(permutate_key, 56)
+        print(f"C0: {format(left, '028b')}")
+        print(f"D0: {format(right, '028b')}")
         keys = [None] * self.ITERATIONS
         for i in range(self.ITERATIONS):
-            left = self.binary_left_rotation(left, self.SHIFTS[i])
-            right = self.binary_left_rotation(right, self.SHIFTS[i])
-            keys[i] = self.get_permutatation(left + right, self.COMPRESSION_PERMUTATION)
+            left = self.binary_left_rotation(left, self.SHIFTS[i], 28)
+            right = self.binary_left_rotation(right, self.SHIFTS[i], 28)
+            print(f"C{i + 1}: {format(left, '028b')}")
+            print(f"D{i + 1}: {format(right, '028b')}")
+            res = (left << 28) | right
+            print(f"res: {format(res, '056b')}")
+            keys[i] = self.get_permutatation(res, self.COMPRESSION_PERMUTATION, 56)
+            print(f"Key{i + 1}: {format(keys[i], '056b')}")
         return keys
 
-    def get_permutatation(self, binary: str, permutation_rules: list):
+    def get_permutatation(self, binary: int, permutation_rules: list, bit_numer: int) -> int:
         """
-        Returns a permutation of string
-        :param binary: Binary what will be permuted.
+        Returns a permutation of an integer's bits.
+        :param binary: Integer whose bits will be permuted.
         :param permutation_rules: Rules of the permutation.
-        :return: Permuted binary.
+        :return: Permuted integer.
         """
-        permutation = ''
-        for position in permutation_rules:
-            permutation += binary[position - 1]
-        return permutation
+        permuted_binary = 0
+        for index, position in enumerate(permutation_rules):
+            bit = (binary >> (bit_numer - position)) & 1
+            permuted_binary |= (bit << (len(permutation_rules) - 1 - index))
+        return permuted_binary
 
-    def split_in_half(self, binary: str):
+    def split_in_half(self, binary: int, total_bits: int) -> tuple:
         """
-        Returns binary split in half.
-        :param binary: Binary what will be split.
-        :return: Left and right half of the binary.
+        Splits an integer representing binary data into two halves.
+        :param binary: Integer representing binary data to be split.
+        :param total_bits: The total number of significant bits in 'binary' to consider.
+        :return: Two integers representing the left and right halves.
         """
-        half = len(binary) // 2
-        return binary[:half], binary[half:]
+        half_length = total_bits // 2
+        right_mask = (1 << half_length) - 1
+        right_half = binary & right_mask
+        left_half = binary >> half_length
+        return left_half, right_half
 
-    def binary_left_rotation(self, binary: str, n: int):
+    def binary_left_rotation(self, binary: int, shift: int, total_bits: int) -> int:
         """
         Returns binary rotation of the binary.
         :param binary: Binary what will be rotated.
-        :param n: Number of shift positions.
+        :param shift: Number of shift positions.
         :return: Rotated binary.
         """
-        return binary[n:] + binary[:n]
+        mask = (1 << total_bits) - 1
+        binary &= mask
+        return ((binary << shift) | (binary >> (total_bits - shift))) & mask
+
 
     def add_zero_padding(self, input_bytes: bytes):
         """
@@ -211,66 +229,71 @@ class Des:
         num_of_padding_bytes = decoded_bytes[-1]
         return decoded_bytes[:-num_of_padding_bytes]
 
-    def encode_block(self, bytes_block: bytes, keys: list):
+    def encode_block(self, bytes_block: bytes, keys: list) -> bytes:
         """
         Encoding or decoding the block of bytes.
         :param bytes_block: Block of bytes what will be encoded.
         :param keys: Keys for each iteration
         :return: Encoded or decoded bytes.
         """
-        binary_block = ''.join(format(byte, '08b') for byte in bytes_block)
+        binary_block = int.from_bytes(bytes_block, byteorder='big')
+        #print(f"Message: {format(binary_block, '064b')}")
         # Initial permutation
-        permuted_block = self.get_permutatation(binary_block, self.INITIAL_PERMUTATION)
+        permuted_block = self.get_permutatation(binary_block, self.INITIAL_PERMUTATION, 64)
+        #print(f"Permuted: {format(permuted_block, '064b')}")
         # Split into two half
-        left, right = self.split_in_half(permuted_block)
+        left, right = self.split_in_half(permuted_block, 64)
         for i in range(self.ITERATIONS):
+            #print(f"L{i} = {format(left, '032b')}")
+            #print(f"R{i} = {format(right, '032b')}")
             left_previous = left
             right_previous = right
             # Ln = Rn - 1
             left = right_previous
             # Rn
             # Expanding R
-            right = self.get_permutatation(right, self.EXPAND_PERMUTATION)
-            right = self.xor_operation(right, keys[i])
+            right = self.get_permutatation(right, self.EXPAND_PERMUTATION, 32)
+            #print(f"R{i} = {format(right, '048b')}")
+            #print(f"K{i} = {format(keys[i], '048b')}")
+            right = right ^ keys[i]
+            #print(f"R{i} = {format(right, '048b')}")
             right = self.s_box_operation(right)
+            #print(f"R{i} = {format(right, '032b')}")
             # Permutation
-            right = self.get_permutatation(right, self.FUNCTION_PERMUTATION)
+            right = self.get_permutatation(right, self.FUNCTION_PERMUTATION, 32)
+            #print(f"R{i} = {format(right, '032b')}")
             # xor with left side
-            right = self.xor_operation(left_previous, right)
-        encrypted_block = right + left
-        encrypted_block = self.get_permutatation(encrypted_block, self.FINAL_PERMUTATION)
-        encrypted_block = int(encrypted_block, 2).to_bytes(8, byteorder='big')
+            right = left_previous ^ right
+            #print(f"R{i} = {format(right, '032b')}")
+        encrypted_block = (right << 28) | left
+        encrypted_block = self.get_permutatation(encrypted_block, self.FINAL_PERMUTATION, 64)
+        #print(f"Encrypted block = {format(encrypted_block, '064b')}")
+        encrypted_block = encrypted_block.to_bytes(8, byteorder='big')
         return encrypted_block
 
-    def xor_operation(self, first_binary: str, second_binary: str):
+    def xor_operation(self, first_binary: int, second_binary: int) -> int:
         """
         The operation of xor of two binaries.
         :param first_binary: The first binary (in string).
         :param second_binary: The second binary (in string).
         :return: Result of XOR operation.
         """
-        if len(first_binary) != len(second_binary):
-            raise ValueError("Binary strings must be of the same length")
-        num_bits = len(first_binary)
-        result = int(first_binary, 2) ^ int(second_binary, 2)
-        return format(result, f'0{num_bits}b')
+        return first_binary ^ second_binary
 
-    def s_box_operation(self, binary: str):
+    def s_box_operation(self, binary: int) -> int:
         """
         Operation of S-Boxes performing a substitution from 48-bits to 32-bits
         :param binary: Binary on which the substitution will be performed.
         :return: Substituted binary.
         """
-        result = ''
+        result = 0
         for i in range(self.NUMBER_OF_S_BOXES):
             # get 6 bits
-            start_index = i * self.BITS_IN_S_BOX
-            end_index = start_index + self.BITS_IN_S_BOX
-            segment = binary[start_index:end_index]
+            segment = (binary >> ((self.NUMBER_OF_S_BOXES - 1 - i) * self.BITS_IN_S_BOX)) & 0b111111
             # get row
-            row = int(segment[0] + segment[5], 2)
+            row = ((segment >> 5) << 1) | (segment & 1)
             # get column
-            column = int(segment[1] + segment[2] + segment[3] + segment[4], 2)
+            column = (segment >> 1) & 0b1111
             s_box_value = self.S_BOXES[i * self.S_BOX_SIZE + row * self.S_BOX_COLUMNS + column]
-            result += format(s_box_value, '04b')
+            result = (result << 4) | s_box_value
         return result
