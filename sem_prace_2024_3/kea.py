@@ -1,12 +1,23 @@
+from tqdm import tqdm
 
-def split_into_blocks(input_bytes, bits_per_block):
-    # Combine bytes into one large integer
-    total_bits = len(input_bytes) * 8
-    padding = bits_per_block - (total_bits % bits_per_block)
+BITS_IN_BYTE = 8
+
+def split_into_blocks(input_bytes: bytes, bits_per_block: int):
+    """
+    Splits input bytes into the blocks of specified size.
+    Applying padding if it is necessary to align last block.
+
+    :param input_bytes: The input data to be split into blocks.
+    :param bits_per_block: The size of each block
+    :return: - blocks (list): List of blocks represented in binary (integer)
+             - padding (int): The number of bits used to padding the last block.
+    """
+    total_bits = len(input_bytes) * BITS_IN_BYTE
+    padding = (bits_per_block - (total_bits % bits_per_block)) % bits_per_block
     large_int = int.from_bytes(input_bytes, 'big')
     large_int <<= padding
 
-    # Prepare blocks
+    # Extract blocks of the specified size.
     blocks = []
     for i in range(0, total_bits + padding, bits_per_block):
         block = large_int & ((1 << bits_per_block) - 1)
@@ -17,6 +28,9 @@ def split_into_blocks(input_bytes, bits_per_block):
 
 
 class KnapsackEncryptionAlgorithm:
+    """
+    Implements the Knapsack Encryption Algorithm.
+    """
 
     def __init__(self, private_key: list, public_key: list, p: int, q: int):
         self.private_key = private_key
@@ -25,19 +39,28 @@ class KnapsackEncryptionAlgorithm:
         self.q = q
         self.p_inverted = None
 
-    def transform_private_to_public(self):
-        for key in self.private_key:
-            self.public_key.append((key * self.p) % self.q)
-        return self.public_key
+    def encrypt(self, input_bytes: bytes, file_name: str):
+        """
+        Encrypts input bytes using knapsack encryption algorithm.
 
-    def encrypt(self, input_bytes):
+        :param input_bytes: The plaintext data to encrypt.
+        :param file_name: Name of the file what is encrypted.
+        :return: - encrypted_blocks (list): A list of encrypted blocks.
+                 - padding (int): The applied padding.
+        """
         blocks, padding = split_into_blocks(input_bytes, len(self.private_key))
         encrypted_blocks = []
-        for block in blocks:
+        for block in tqdm(blocks, desc=f"Decrypting: {file_name}"):
             encrypted_blocks.append(self.encrypt_block(block))
         return encrypted_blocks, padding
 
-    def encrypt_block(self, plaintext_block):
+    def encrypt_block(self, plaintext_block: int) -> int:
+        """
+        Encrypts a single block of plaintext.
+
+        :param plaintext_block: The plaintext block to encrypt.
+        :return: The encrypted value of the block.
+        """
         indexes = []
         encrypted_value = 0
         for i in range(len(self.private_key)):
@@ -46,41 +69,47 @@ class KnapsackEncryptionAlgorithm:
 
         for index in indexes:
             encrypted_value += self.public_key[index]
-        #print(indexes)
-        #print(encrypted_value)
         return encrypted_value
 
-    def get_p_inverted(self):
-        #p_inverted = 0
-        return pow(self.p, -1, self.q)
-        """while (p_inverted * self.p) % self.q != 1:
-            p_inverted += 1
-        self.p_inverted = p_inverted
-        return p_inverted"""
+    def get_p_inverted(self) -> int:
+        """
+        Calculates the modular inverse of p modulo q.
 
-    def decrypt(self, input_text, padding: int):
+        :return: The modular inverse of p modulo q.
+        """
+        return pow(self.p, -1, self.q)
+
+    def decrypt(self, input_text: list, padding: int, file_name: str) -> int:
+        """
+        Decrypts a list of encrypted blocks into plaintext.
+
+        :param input_text: The encrypted blocks.
+        :param padding: The padding size applied to the last block.
+        :param file_name: Name of the file what is decrypted.
+        :return: Decrypted plaintext as binary.
+        """
         self.p_inverted = self.get_p_inverted()
         decrypted_value = 0
-        for block in input_text:
-            #print(block)
+        for block in tqdm(input_text, desc=f"Decrypting: {file_name}"):
             decrypted_block = self.decrypt_block(block)
-            #print(f"Decrypted block: {format(decrypted_block, '06b')}")
             decrypted_value <<= len(self.private_key)
             decrypted_value |= decrypted_block
-            #print(f"Decrypted value: {format(decrypted_value, '06b')}")
         decrypted_value >>= int(padding)
         return decrypted_value
 
-    def decrypt_block(self, ciphertext_block: int):
+    def decrypt_block(self, ciphertext_block: int) -> int:
+        """
+        Decrypts a single encrypted block.
+
+        :param ciphertext_block: The encrypted block to decrypt.
+        :return: The decrypted plaintext block as binary.
+        """
         decrypted_value = (ciphertext_block * self.p_inverted) % self.q
-        # rozklad
         plaintext = int('0', 2)
         msb = 1 << (len(self.private_key) - 1)
         for i in range(len(self.private_key)):
             plaintext >>= 1
-            #print(f"Round{i}: decrypted_value - {decrypted_value}, private_key: {self.private_key[len(self.private_key) - 1 - i]}")
             if (decrypted_value - self.private_key[len(self.private_key) - 1 - i]) >= 0:
                 decrypted_value -= self.private_key[len(self.private_key) - 1 - i]
                 plaintext |= msb
-            #print(f"PlainText after round{i}: {format(plaintext, '06b')}")
         return plaintext

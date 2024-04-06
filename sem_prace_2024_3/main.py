@@ -19,6 +19,14 @@ DEBUG = False
 
 
 def transform_private_to_public_key(private_key: list, q: int, p: int) -> list:
+    """
+    Transforms a given primary key to the public key.
+
+    :param private_key: A secret super increasing sequence.
+    :param q: The modular base used for the transformation.
+    :param p: The multiplier used in the transformation.
+    :return: public key (list).
+    """
     public_key = []
     for key in private_key:
         public_key.append((key * p) % q)
@@ -26,6 +34,14 @@ def transform_private_to_public_key(private_key: list, q: int, p: int) -> list:
 
 
 def generate_super_increasing_sequence(min_bits: int, max_bits: int, length: int) -> list:
+    """
+    Generates a super increasing sequence.
+
+    :param min_bits: The minimal bit length for key numbers.
+    :param max_bits: The maximal allowed bit length for key numbers.
+    :param length: The length of the key.
+    :return: A super increasing sequence or False in case, that any number is bigger than max_bits.
+    """
     first_num = random.randint(2 ** (min_bits - 1), 2 ** min_bits - 1)
     sequence = [first_num]
 
@@ -38,10 +54,22 @@ def generate_super_increasing_sequence(min_bits: int, max_bits: int, length: int
 
 
 def generate_q(min_bits: int, max_bits: int) -> int:
+    """
+    Generates a random integer q within specified length constraints.
+    :param min_bits: The minimum bit length for q.
+    :param max_bits: The maximum bit length for q.
+    :return: A randomly generated modulo modifier q.
+    """
     return random.randint(2 ** (min_bits - 1), 2 ** max_bits - 1)
 
 
 def generate_p(q: int) -> int:
+    """
+    Generates a random integer p that is not a multiplier of with q.
+
+    :param q: The integer q with which p must not be a multiplier.
+    :return: A randomly generated multiplier p
+    """
     while True:
         r = random.randint(2, q - 1)
         if gcd(q, r) == 1:
@@ -49,22 +77,38 @@ def generate_p(q: int) -> int:
 
 
 def modular_inverse_exists(p, q):
-    # Check if n and m are coprime
+    """
+    Checks if the modular inverse of p modulo q exists.
+
+    :param p: The integer p for which the modular inverse is to be found.
+    :param q: The modulus q.
+    :return: True - modular inverse of p exists, False - modular inverse do not exists.
+    """
     if gcd(p, q) == 1:
-        # n and m are coprime, so n^-1 exists
-        return True, pow(p, -1, q)
+        return True
     else:
-        # n and m are not coprime, so n^-1 does not exist
-        return False, None
+        return False
 
 
 def save_key_to_file(file_name: str, key: list):
+    """
+    Saves a key to a file.
+
+    :param file_name: The name of the file where the key will be saved.
+    :param key: The key to save.
+    """
     with open(file_name, "w") as file:
         file.write(', '.join(map(str, key)))
         file.close()
 
 
 def load_key_from_file(file_name: str) -> list:
+    """
+    Loads a key from a file.
+
+    :param file_name: The name of the file from which to load the key.
+    :return: The key loaded from the file.
+    """
     with open(file_name, "r") as file:
         key_string = file.read()
         # Split the string by commas and convert each part back to an integer
@@ -73,18 +117,38 @@ def load_key_from_file(file_name: str) -> list:
 
 
 def save_param_to_file(file_name: str, parameter_value: int):
+    """
+    Saves a value of parameter to a file.
+
+    :param file_name: The name of the file where the parameter will be saved.
+    :param parameter_value: The parameter value to save.
+    """
     with open(file_name, 'w') as file:
         file.write(str(parameter_value))
         file.close()
 
 
 def load_param_from_file(file_name: str) -> int:
+    """
+    Loads a value of parameter from a file.
+
+    :param file_name: The name of the file from which to load the parameter.
+    :return: The parameter value loaded from the file.
+    """
     with open(file_name, 'r') as file:
         parameter_value = int(file.read())
     return parameter_value
 
 
 def generate_parameter():
+    """
+    Generates and saves cryptographic parameters including the private key, q, p, and the public key.
+
+    :return: - private_key (list): The secret super increasing sequence of numbers.
+             - public_key (list): The public list of numbers.
+             - p (int): The multiplier p.
+             - q (int): The modular base q.
+    """
     p_inverted_exists = False
     while not p_inverted_exists:
         private_key = generate_super_increasing_sequence(min_bits=100, max_bits=400, length=KEY_LENGTH)
@@ -102,18 +166,30 @@ def generate_parameter():
 
 
 def load_parameter():
+    """
+     Loads cryptographic parameters including the private key, public key, p, and q from files.
+
+    :return: - private_key (list): The secret super increasing sequence of numbers.
+             - public_key (list): The public list of numbers.
+             - p (int): The multiplier p.
+             - q (int): The modular base q.
+    """
     private_key = load_key_from_file(PRIVATE_KEY_FILE)
     public_key = load_key_from_file(PUBLIC_KEY_FILE)
     p = load_param_from_file(P_FILE)
     q = load_param_from_file(Q_FILE)
-    print(f"Private key: {private_key}")
-    print(f"Public key: {public_key}")
-    print(f"P: {p}")
-    print(f"Q: {q}")
     return private_key, public_key, p, q
 
 
 def save_encrypted_file(name: str, extension: str, padding: int, encrypted_blocks: list):
+    """
+    Saves encrypted data to a file.
+
+    :param name: The name of the file what has been encrypted.
+    :param extension: The extension of the file what has been encrypted.
+    :param padding: Number of added zero bits.
+    :param encrypted_blocks: The list of encrypted blocks to save.
+    """
     # Controls if output dir exists
     if not os.path.exists(OUTPUT_DIR):
         os.makedirs(OUTPUT_DIR)
@@ -124,6 +200,13 @@ def save_encrypted_file(name: str, extension: str, padding: int, encrypted_block
 
 
 def save_decrypted_file(name: str, extension: str, data: int):
+    """
+    Saves decrypted data to a file.
+
+    :param name: The name of the decrypted file.
+    :param extension: The file extension for the output file.
+    :param data: The decrypted data to save.
+    """
     if not os.path.exists(DECODED_DIR):
         os.makedirs(DECODED_DIR)
     byte_length = (data.bit_length() + 7) // 8
@@ -135,6 +218,7 @@ def save_decrypted_file(name: str, extension: str, data: int):
 
 if __name__ == '__main__':
     if DEBUG:
+        # Example from the lecture
         private_key = [2, 3, 6, 13, 27, 52]
         p = 31
         q = 105
@@ -145,7 +229,7 @@ if __name__ == '__main__':
         num_bytes = (message.bit_length() + 7) // 8
         message_bytes = message.to_bytes(num_bytes, byteorder='big')
         knapsackAlgo = KnapsackEncryptionAlgorithm(private_key=private_key, public_key=public_key, p=p, q=q)
-        encrypted_text, padding = knapsackAlgo.encrypt(message_bytes)
+        encrypted_text, padding = knapsackAlgo.encrypt(message_bytes, "Debug")
         save_encrypted_file(name='debug', extension='.txt', padding=padding,
                             encrypted_blocks=encrypted_text)
         print(f"Encrypted message: {encrypted_text}")
@@ -155,7 +239,7 @@ if __name__ == '__main__':
             input_data = f.read()
             f.close()
         input_blocks = [int(block) for block in input_data.strip().split('\n')]
-        decrypted_text = knapsackAlgo.decrypt(input_blocks, padding)
+        decrypted_text = knapsackAlgo.decrypt(input_blocks, padding, "Debug")
         print(f"Decrypted message: {format(decrypted_text, '024b')}")
 
     else:
@@ -178,20 +262,20 @@ if __name__ == '__main__':
                     files = sorted(os.listdir(DATA_SOURCE))
                     print(f"{len(files)} files found in {DATA_SOURCE}")
                     for file in files:
-                        print(f"Encrypting file: {file}")
                         # Saving filename and extension
                         file_name, file_extension = os.path.splitext(os.path.basename(file))
                         # Loading file
                         with open(DATA_SOURCE + "/" + file, 'rb') as f:
                             input_bytes = f.read()
                             f.close()
-                        encrypted_blocks, padding = knapsackAlgo.encrypt(input_bytes)
+                        encrypted_blocks, padding = knapsackAlgo.encrypt(input_bytes, file)
                         save_encrypted_file(name=file_name, extension=file_extension, padding=padding,
                                             encrypted_blocks=encrypted_blocks)
 
 
             elif mode == "-d":
                 print("Decryption mode")
+                # loading parameters
                 private_key, public_key, p, q = load_parameter()
                 knapsackAlgo = KnapsackEncryptionAlgorithm(private_key=private_key, public_key=public_key, p=p, q=q)
 
@@ -199,22 +283,18 @@ if __name__ == '__main__':
                     files = sorted(os.listdir(OUTPUT_DIR))
                     print(f"{len(files)} files found in {OUTPUT_DIR}")
                     for file in files:
-                        print(f"Decrypting file: {file}")
                         file_name, extension = os.path.splitext(os.path.basename(file))
                         file_parameters = file_name.split('_')
                         padding = file_parameters[0]
                         decoded_file_name = file_parameters[1]
                         decoded_file_extension = file_parameters[2]
-                        print(f"Padding: {padding}")
-                        print(f"File name: {decoded_file_name}")
-                        print(f"File extension: {decoded_file_extension}")
 
                         with open(OUTPUT_DIR + "/" + file, 'r') as f:
                             input_data = f.read()
                             f.close()
 
                         input_blocks = [int(block) for block in input_data.strip().split('\n')]
-                        decrypted_text = knapsackAlgo.decrypt(input_text=input_blocks, padding=padding)
+                        decrypted_text = knapsackAlgo.decrypt(input_text=input_blocks, padding=padding, file_name=file)
                         save_decrypted_file(decoded_file_name, decoded_file_extension, decrypted_text)
 
             else:
