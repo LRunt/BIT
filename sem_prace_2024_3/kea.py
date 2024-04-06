@@ -1,28 +1,19 @@
-N = 5
-
 
 def split_into_blocks(input_bytes, bits_per_block):
     # Combine bytes into one large integer
     total_bits = len(input_bytes) * 8
+    padding = bits_per_block - (total_bits % bits_per_block)
     large_int = int.from_bytes(input_bytes, 'big')
+    large_int <<= padding
 
     # Prepare blocks
     blocks = []
-    for _ in range(0, total_bits, bits_per_block):
+    for i in range(0, total_bits + padding, bits_per_block):
         block = large_int & ((1 << bits_per_block) - 1)
         blocks.insert(0, block)
         large_int >>= bits_per_block
 
-    # Check if the last block needs padding (it's the first in the list due to insert(0, block))
-    last_block_bits = total_bits % bits_per_block
-    if last_block_bits != 0:
-        padding_needed = bits_per_block - last_block_bits
-        # Pad the last block by shifting
-        blocks[0] <<= padding_needed
-    else:
-        padding_needed = 0  # No padding needed
-
-    return blocks, padding_needed
+    return blocks, padding
 
 
 class KnapsackEncryptionAlgorithm:
@@ -60,20 +51,24 @@ class KnapsackEncryptionAlgorithm:
         return encrypted_value
 
     def get_p_inverted(self):
-        p_inverted = 0
-        while (p_inverted * self.p) % self.q != 1:
+        #p_inverted = 0
+        return pow(self.p, -1, self.q)
+        """while (p_inverted * self.p) % self.q != 1:
             p_inverted += 1
         self.p_inverted = p_inverted
-        return p_inverted
+        return p_inverted"""
 
     def decrypt(self, input_text, padding: int):
         self.p_inverted = self.get_p_inverted()
         decrypted_value = 0
         for block in input_text:
+            #print(block)
             decrypted_block = self.decrypt_block(block)
+            #print(f"Decrypted block: {format(decrypted_block, '06b')}")
             decrypted_value <<= len(self.private_key)
             decrypted_value |= decrypted_block
-        decrypted_value >>= padding
+            #print(f"Decrypted value: {format(decrypted_value, '06b')}")
+        decrypted_value >>= int(padding)
         return decrypted_value
 
     def decrypt_block(self, ciphertext_block: int):
@@ -83,7 +78,7 @@ class KnapsackEncryptionAlgorithm:
         msb = 1 << (len(self.private_key) - 1)
         for i in range(len(self.private_key)):
             plaintext >>= 1
-            #print(f"Round{i}: decrypted_value - {decrypted_value}, private_key: {self.private_key[N - i]}")
+            #print(f"Round{i}: decrypted_value - {decrypted_value}, private_key: {self.private_key[len(self.private_key) - 1 - i]}")
             if (decrypted_value - self.private_key[len(self.private_key) - 1 - i]) >= 0:
                 decrypted_value -= self.private_key[len(self.private_key) - 1 - i]
                 plaintext |= msb
