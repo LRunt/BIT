@@ -21,9 +21,20 @@ if __name__ == '__main__':
     kna = KnapsackEncryptionAlgorithm(encryption=True, private_key=PRIVATE_KEY, p=P, q=Q)
     public_key = kna.transform_private_to_public()
     print(public_key)
-    kna.encrypt_block(int('011000', 2))
-    kna.encrypt_block(int('110101', 2))
-    kna.encrypt_block(int('101110', 2))
+    print("Encoding")
+    kna.encrypt(MESSAGE)
+    """block1 = kna.encrypt_block(int('011000', 2))
+    block2 = kna.encrypt_block(int('110101', 2))
+    block3 = kna.encrypt_block(int('101110', 2))
+    p_inverted = kna.get_p_inverted()
+    print(f"P-inverted: {p_inverted}")
+    print("Decoding")
+    decrypted1 = kna.decrypt_block(block1)
+    print(f"Block1: {format(decrypted1, '06b')}")
+    decrypted2 = kna.decrypt_block(block2)
+    print(f"Block2: {format(decrypted2, '06b')}")
+    decrypted3 = kna.decrypt_block(block3)
+    print(f"Block3: {format(decrypted3, '06b')}")"""
 
 
 
