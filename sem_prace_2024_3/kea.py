@@ -66,7 +66,17 @@ class KnapsackEncryptionAlgorithm:
         self.p_inverted = p_inverted
         return p_inverted
 
-    def decrypt_block(self, ciphertext_block):
+    def decrypt(self, input_text, padding: int):
+        self.p_inverted = self.get_p_inverted()
+        decrypted_value = 0
+        for block in input_text:
+            decrypted_block = self.decrypt_block(block)
+            decrypted_value <<= len(self.private_key)
+            decrypted_value |= decrypted_block
+        decrypted_value >>= padding
+        return decrypted_value
+
+    def decrypt_block(self, ciphertext_block: int):
         decrypted_value = (ciphertext_block * self.p_inverted) % self.q
         # rozklad
         plaintext = int('0', 2)
@@ -74,8 +84,8 @@ class KnapsackEncryptionAlgorithm:
         for i in range(len(self.private_key)):
             plaintext >>= 1
             #print(f"Round{i}: decrypted_value - {decrypted_value}, private_key: {self.private_key[N - i]}")
-            if (decrypted_value - self.private_key[N - i]) >= 0:
-                decrypted_value -= self.private_key[N - i]
+            if (decrypted_value - self.private_key[len(self.private_key) - 1 - i]) >= 0:
+                decrypted_value -= self.private_key[len(self.private_key) - 1 - i]
                 plaintext |= msb
             #print(f"PlainText after round{i}: {format(plaintext, '06b')}")
         return plaintext

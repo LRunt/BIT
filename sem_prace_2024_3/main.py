@@ -57,10 +57,24 @@ def save_key_to_file(file_name: str, key: list):
         file.close()
 
 
+def load_key_from_file(file_name: str) -> list:
+    with open(file_name, "r") as file:
+        key_string = file.read()
+        # Split the string by commas and convert each part back to an integer
+        key = list(map(int, key_string.split(', ')))
+    return key
+
+
 def save_param_to_file(file_name: str, parameter_value: int):
     with open(file_name, 'w') as file:
         file.write(str(parameter_value))
         file.close()
+
+
+def load_param_from_file(file_name: str) -> int:
+    with open(file_name, 'r') as file:
+        parameter_value = int(file.read())
+    return parameter_value
 
 
 def generate_parameter():
@@ -76,6 +90,18 @@ def generate_parameter():
     save_key_to_file(file_name=PUBLIC_KEY_FILE, key=public_key)
     return private_key, q, p, public_key
 
+def load_parameter():
+    private_key = load_key_from_file(PRIVATE_KEY_FILE)
+    public_key = load_key_from_file(PUBLIC_KEY_FILE)
+    p = load_param_from_file(P_FILE)
+    q = load_param_from_file(Q_FILE)
+    print(f"Private key: {private_key}")
+    print(f"Public key: {public_key}")
+    print(f"P: {p}")
+    print(f"Q: {q}")
+    return private_key, public_key, p, q
+
+
 def save_encrypted_file(name: str, extension: str, padding: int, encrypted_blocks: list):
     # Controls if output dir exists
     if not os.path.exists(OUTPUT_DIR):
@@ -84,6 +110,13 @@ def save_encrypted_file(name: str, extension: str, padding: int, encrypted_block
         for block in encrypted_blocks:
             file.write(f"{str(block)}\n")
         file.close()
+
+def save_decrypted_file(name: str, extension: str, data: int):
+    if not os.path.exists(DECODED_DIR):
+        os.makedirs(DECODED_DIR)
+    binary_data = data.to_bytes(data.bit_length() // 8, byteorder='big')
+    with open(DECODED_DIR + "/" + name + extension, 'wb') as file:
+        file.write(binary_data)
 
 
 if __name__ == '__main__':
@@ -115,12 +148,35 @@ if __name__ == '__main__':
                         input_bytes = f.read()
                         f.close()
                     encrypted_blocks, padding = knapsackAlgo.encrypt(input_bytes)
-                    save_encrypted_file(name=file_name, extension=file_extension, padding=padding, encrypted_blocks=encrypted_blocks)
+                    save_encrypted_file(name=file_name, extension=file_extension, padding=padding,
+                                        encrypted_blocks=encrypted_blocks)
 
 
         elif mode == "-d":
             print("Decryption mode")
+            private_key, public_key, p, q = load_parameter()
+            knapsackAlgo = KnapsackEncryptionAlgorithm(private_key=private_key, public_key=public_key, p=p, q=q)
 
+            if os.path.exists(OUTPUT_DIR):
+                files = sorted(os.listdir(OUTPUT_DIR))
+                print(f"{len(files)} files found in {OUTPUT_DIR}")
+                for file in files:
+                    print(f"Decrypting file: {file}")
+                    file_name, extension = os.path.splitext(os.path.basename(file))
+                    file_parameters = file_name.split('_')
+                    padding = file_parameters[0]
+                    decoded_file_name = file_parameters[1]
+                    decoded_file_extension = file_parameters[2]
+                    print(f"Padding: {padding}")
+                    print(f"File name: {decoded_file_name}")
+                    print(f"File extension: {decoded_file_extension}")
+
+                    with open(OUTPUT_DIR + "/" + file, 'r') as f:
+                        input_data = f.read()
+                        f.close()
+
+                    plaintext = knapsackAlgo.decrypt(input_text=input_data, padding=padding)
+                    save_decrypted_file(decoded_file_name, decoded_file_extension, plaintext)
 
         else:
             print("Unknown mode... Choices are [-e, -d]")
