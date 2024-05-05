@@ -1,0 +1,6 @@
+STUDENT_NUMBER = "A20B0226P"
+PARAMETER_X_FILE = "x.txt"
+PARAMETER_Y_FILE = "y.txt"
+PARAMETER_G_FILE = "g.txt"
+PARAMETER_P_FILE = "p.txt"
+SIGNATURE_FILE = "signature.txt"
